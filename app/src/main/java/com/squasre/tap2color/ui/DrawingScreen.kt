@@ -65,7 +65,6 @@ fun DrawingScreen(
     var showColorPicker by remember { mutableStateOf(false) }
     var showCelebration by remember { mutableStateOf(false) }
 
-    // Observe completion state
     LaunchedEffect(viewModel.isCompleted) {
         if (viewModel.isCompleted) {
             showCelebration = true
@@ -115,6 +114,10 @@ fun DrawingScreen(
                             ImageExporter.shareBitmap(context, bitmap)
                         }) {
                             Icon(Icons.Default.Share, contentDescription = "Share")
+                        }
+                        // Skip/Next button directly in top bar
+                        IconButton(onClick = onNextDrawing) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Skip to Next")
                         }
                     }
                 )
@@ -281,7 +284,6 @@ fun CelebrationOverlay(onDismiss: () -> Unit, onNextDrawing: () -> Unit) {
             }
         }
         
-        // Simple confetti effect using Canvas
         Canvas(modifier = Modifier.fillMaxSize()) {
             val random = Random(42)
             for (i in 0 until 50) {

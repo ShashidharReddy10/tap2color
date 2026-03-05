@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
                                     val currentIndex = allDrawings.indexOf(template)
                                     
                                     // Find the next uncompleted drawing
-                                    var nextTemplate = allDrawings.indices.asSequence()
+                                    val nextTemplate = allDrawings.indices.asSequence()
                                         .map { (currentIndex + 1 + it) % allDrawings.size }
                                         .map { allDrawings[it] }
                                         .firstOrNull { !coloringViewModel.isTemplateCompleted(it) }
