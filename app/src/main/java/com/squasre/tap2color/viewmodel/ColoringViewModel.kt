@@ -6,6 +6,8 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
@@ -29,12 +31,16 @@ class ColoringViewModel(application: Application) : AndroidViewModel(application
     
     private val history = mutableStateListOf<Map<String, Color>>()
 
+    var isPremiumUnlocked by mutableStateOf(false)
+        private set
+
     val isCompleted by derivedStateOf {
         regionColors.isNotEmpty() && regionColors.values.all { it != Color.White }
     }
 
     init {
         loadCustomColors()
+        isPremiumUnlocked = prefs.getBoolean("premium_unlocked", false)
     }
 
     fun loadTemplate(template: DrawingTemplate) {
@@ -53,6 +59,15 @@ class ColoringViewModel(application: Application) : AndroidViewModel(application
             regions.forEach { 
                 regionColors[it.id] = Color.White 
             }
+        }
+    }
+
+    fun isTemplateCompleted(template: DrawingTemplate): Boolean {
+        val regions = SvgParser.parse(template.svgContent)
+        if (regions.isEmpty()) return false
+        return regions.all { region ->
+            val key = "progress_${template.id}_${region.id}"
+            prefs.contains(key) && prefs.getInt(key, Color.White.toArgb()) != Color.White.toArgb()
         }
     }
 
@@ -93,6 +108,16 @@ class ColoringViewModel(application: Application) : AndroidViewModel(application
             customColors.add(0, color)
             saveCustomColors()
         }
+    }
+
+    fun unlockPremium() {
+        isPremiumUnlocked = true
+        prefs.edit { putBoolean("premium_unlocked", true) }
+    }
+
+    fun lockPremium() {
+        isPremiumUnlocked = false
+        prefs.edit { putBoolean("premium_unlocked", false) }
     }
 
     private fun saveProgress() {

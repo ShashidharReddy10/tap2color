@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
                 NavHost(navController = navController, startDestination = "home") {
                     composable("home") {
                         HomeScreen(
+                            viewModel = coloringViewModel,
                             onDrawingSelected = { template ->
                                 coloringViewModel.loadTemplate(template)
                                 navController.navigate("drawing/${template.id}")
@@ -62,7 +63,27 @@ class MainActivity : ComponentActivity() {
                             DrawingScreen(
                                 template = template,
                                 viewModel = coloringViewModel,
-                                onBack = { navController.popBackStack() }
+                                onBack = { navController.popBackStack() },
+                                onNextDrawing = {
+                                    val allDrawings = SampleDrawings.all
+                                    val currentIndex = allDrawings.indexOf(template)
+                                    
+                                    // Find the next uncompleted drawing
+                                    var nextTemplate = allDrawings.indices.asSequence()
+                                        .map { (currentIndex + 1 + it) % allDrawings.size }
+                                        .map { allDrawings[it] }
+                                        .firstOrNull { !coloringViewModel.isTemplateCompleted(it) }
+
+                                    if (nextTemplate != null) {
+                                        coloringViewModel.loadTemplate(nextTemplate)
+                                        navController.navigate("drawing/${nextTemplate.id}") {
+                                            popUpTo("drawing/${template.id}") { inclusive = true }
+                                        }
+                                    } else {
+                                        // If all are completed, go back to home
+                                        navController.popBackStack("home", inclusive = false)
+                                    }
+                                }
                             )
                         }
                     }

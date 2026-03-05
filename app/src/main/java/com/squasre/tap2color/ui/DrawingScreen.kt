@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
@@ -51,7 +52,8 @@ import kotlin.random.Random
 fun DrawingScreen(
     template: DrawingTemplate,
     viewModel: ColoringViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNextDrawing: () -> Unit
 ) {
     val context = LocalContext.current
     var selectedColor by remember { mutableStateOf(Color.Red) }
@@ -207,7 +209,13 @@ fun DrawingScreen(
             enter = fadeIn() + scaleIn(initialScale = 0.8f),
             exit = fadeOut()
         ) {
-            CelebrationOverlay(onDismiss = { showCelebration = false })
+            CelebrationOverlay(
+                onDismiss = { showCelebration = false },
+                onNextDrawing = {
+                    showCelebration = false
+                    onNextDrawing()
+                }
+            )
         }
     }
 
@@ -224,7 +232,7 @@ fun DrawingScreen(
 }
 
 @Composable
-fun CelebrationOverlay(onDismiss: () -> Unit) {
+fun CelebrationOverlay(onDismiss: () -> Unit, onNextDrawing: () -> Unit) {
     val infiniteTransition = rememberInfiniteTransition(label = "celebration")
     
     val rotation by infiniteTransition.animateFloat(
@@ -240,7 +248,7 @@ fun CelebrationOverlay(onDismiss: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.3f))
+            .background(Color.Black.copy(alpha = 0.5f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
     ) {
@@ -258,6 +266,19 @@ fun CelebrationOverlay(onDismiss: () -> Unit) {
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
+            Spacer(modifier = Modifier.height(48.dp))
+            Button(
+                onClick = onNextDrawing,
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE)),
+                modifier = Modifier.height(64.dp).padding(horizontal = 32.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Next Drawing", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                }
+            }
         }
         
         // Simple confetti effect using Canvas

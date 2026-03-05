@@ -12,7 +12,8 @@ data class DrawingTemplate(
     val id: String,
     val name: String,
     val category: String,
-    val svgContent: String
+    val svgContent: String,
+    val isPremium: Boolean = false
 )
 
 object SampleDrawings {
