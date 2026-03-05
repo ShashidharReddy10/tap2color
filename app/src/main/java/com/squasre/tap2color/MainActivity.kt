@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.squasre.tap2color.data.SampleDrawings
 import com.squasre.tap2color.ui.DrawingScreen
+import com.squasre.tap2color.ui.GalleryScreen
 import com.squasre.tap2color.ui.HomeScreen
 import com.squasre.tap2color.ui.theme.Tap2colorTheme
 import com.squasre.tap2color.viewmodel.ColoringViewModel
@@ -25,10 +26,24 @@ class MainActivity : ComponentActivity() {
 
                 NavHost(navController = navController, startDestination = "home") {
                     composable("home") {
-                        HomeScreen(onDrawingSelected = { template ->
-                            coloringViewModel.loadTemplate(template)
-                            navController.navigate("drawing/${template.id}")
-                        })
+                        HomeScreen(
+                            onDrawingSelected = { template ->
+                                coloringViewModel.loadTemplate(template)
+                                navController.navigate("drawing/${template.id}")
+                            },
+                            onGalleryClick = {
+                                navController.navigate("gallery")
+                            }
+                        )
+                    }
+                    composable("gallery") {
+                        GalleryScreen(
+                            onBack = { navController.popBackStack() },
+                            onDrawingSelected = { template ->
+                                coloringViewModel.loadTemplate(template)
+                                navController.navigate("drawing/${template.id}")
+                            }
+                        )
                     }
                     composable("drawing/{drawingId}") { backStackEntry ->
                         val drawingId = backStackEntry.arguments?.getString("drawingId")

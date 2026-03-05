@@ -3,13 +3,23 @@ package com.squasre.tap2color.data
 data class DrawingTemplate(
     val id: String,
     val name: String,
+    val category: DrawingCategory,
     val svgContent: String
 )
+
+enum class DrawingCategory(val displayName: String) {
+    ANIMALS("Animals"),
+    VEHICLES("Vehicles"),
+    FOOD("Food"),
+    NATURE("Nature"),
+    ALL("All")
+}
 
 object SampleDrawings {
     val cat = DrawingTemplate(
         id = "cat",
         name = "Cat",
+        category = DrawingCategory.ANIMALS,
         svgContent = """
             <svg viewBox="0 0 300 300">
             <path id="face"
@@ -35,9 +45,37 @@ object SampleDrawings {
         """.trimIndent()
     )
 
+    val dog = DrawingTemplate(
+        id = "dog",
+        name = "Dog",
+        category = DrawingCategory.ANIMALS,
+        svgContent = """
+            <svg viewBox="0 0 300 300">
+            <path id="head" d="M150 50 C100 50 60 90 60 140 C60 190 100 230 150 230 C200 230 240 190 240 140 C240 90 200 50 150 50Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            <path id="ear_l" d="M70 100 C40 80 30 150 50 180 Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            <path id="ear_r" d="M230 100 C260 80 270 150 250 180 Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            <circle id="nose" cx="150" cy="160" r="15" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            </svg>
+        """.trimIndent()
+    )
+
+    val elephant = DrawingTemplate(
+        id = "elephant",
+        name = "Elephant",
+        category = DrawingCategory.ANIMALS,
+        svgContent = """
+            <svg viewBox="0 0 400 300">
+            <path id="body" d="M100 100 C100 50 300 50 300 100 C350 100 380 150 350 250 L100 250 Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            <path id="ear" d="M80 80 C30 80 30 200 80 220 Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            <path id="trunk" d="M320 150 C380 150 380 280 340 280 L320 250 Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            </svg>
+        """.trimIndent()
+    )
+
     val apple = DrawingTemplate(
         id = "apple",
         name = "Apple",
+        category = DrawingCategory.FOOD,
         svgContent = """
             <svg viewBox="0 0 300 300">
             <path id="apple_body"
@@ -58,9 +96,22 @@ object SampleDrawings {
         """.trimIndent()
     )
 
+    val banana = DrawingTemplate(
+        id = "banana",
+        name = "Banana",
+        category = DrawingCategory.FOOD,
+        svgContent = """
+            <svg viewBox="0 0 300 300">
+            <path id="fruit" d="M50 100 C100 50 250 50 250 250 C200 250 150 200 50 100 Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            <rect id="stem" x="35" y="80" width="20" height="30" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            </svg>
+        """.trimIndent()
+    )
+
     val car = DrawingTemplate(
         id = "car",
         name = "Car",
+        category = DrawingCategory.VEHICLES,
         svgContent = """
             <svg viewBox="0 0 400 200">
             <rect id="car_body"
@@ -88,5 +139,43 @@ object SampleDrawings {
         """.trimIndent()
     )
 
-    val all = listOf(cat, apple, car)
+    val truck = DrawingTemplate(
+        id = "truck",
+        name = "Truck",
+        category = DrawingCategory.VEHICLES,
+        svgContent = """
+            <svg viewBox="0 0 400 250">
+            <rect id="cabin" x="50" y="100" width="100" height="100" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            <rect id="bed" x="150" y="50" width="200" height="150" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            <circle id="w1" cx="100" cy="210" r="25" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            <circle id="w2" cx="200" cy="210" r="25" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            <circle id="w3" cx="300" cy="210" r="25" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            </svg>
+        """.trimIndent()
+    )
+
+    val tree = DrawingTemplate(
+        id = "tree",
+        name = "Tree",
+        category = DrawingCategory.NATURE,
+        svgContent = """
+            <svg viewBox="0 0 300 400">
+            <rect id="trunk" x="130" y="250" width="40" height="100" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            <path id="leaves" d="M150 50 C50 150 100 280 150 280 C200 280 250 150 150 50Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            </svg>
+        """.trimIndent()
+    )
+
+    val sun = DrawingTemplate(
+        id = "sun",
+        name = "Sun",
+        category = DrawingCategory.NATURE,
+        svgContent = """
+            <svg viewBox="0 0 300 300">
+            <circle id="core" cx="150" cy="150" r="60" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
+            </svg>
+        """.trimIndent()
+    )
+
+    val all = listOf(cat, dog, elephant, apple, banana, car, truck, tree, sun)
 }
