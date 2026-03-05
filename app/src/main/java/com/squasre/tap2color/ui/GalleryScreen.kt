@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.squasre.tap2color.data.DrawingCategory
 import com.squasre.tap2color.data.DrawingTemplate
 import com.squasre.tap2color.data.SampleDrawings
 import com.squasre.tap2color.export.ImageExporter
@@ -41,9 +40,9 @@ import com.squasre.tap2color.svg.SvgRegion
 fun GalleryScreen(onBack: () -> Unit, onDrawingSelected: (DrawingTemplate) -> Unit) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("tap2color_prefs", android.content.Context.MODE_PRIVATE) }
-    var selectedCategory by remember { mutableStateOf(DrawingCategory.ALL) }
+    var selectedCategory by remember { mutableStateOf("All") }
     
-    val coloredDrawings = remember {
+    val coloredDrawings = remember(SampleDrawings.all) {
         SampleDrawings.all.filter { template ->
             val regions = SvgParser.parse(template.svgContent)
             regions.any { region ->
@@ -54,7 +53,7 @@ fun GalleryScreen(onBack: () -> Unit, onDrawingSelected: (DrawingTemplate) -> Un
     }
 
     val filteredDrawings = remember(selectedCategory, coloredDrawings) {
-        if (selectedCategory == DrawingCategory.ALL) {
+        if (selectedCategory == "All") {
             coloredDrawings
         } else {
             coloredDrawings.filter { it.category == selectedCategory }
@@ -73,9 +72,8 @@ fun GalleryScreen(onBack: () -> Unit, onDrawingSelected: (DrawingTemplate) -> Un
                 actions = {
                     if (filteredDrawings.isNotEmpty()) {
                         IconButton(onClick = {
-                            // Only share the top 10 most recent/filtered drawings to keep the image clean
                             val drawingsToShare = filteredDrawings.take(10)
-                            val bitmap = captureGalleryBitmap(drawingsToShare, selectedCategory.displayName, prefs)
+                            val bitmap = captureGalleryBitmap(drawingsToShare, selectedCategory, prefs)
                             ImageExporter.shareBitmap(context, bitmap)
                         }) {
                             Icon(Icons.Default.Share, contentDescription = "Share Gallery")

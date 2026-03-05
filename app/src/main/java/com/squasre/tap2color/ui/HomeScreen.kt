@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.squasre.tap2color.data.DrawingCategory
 import com.squasre.tap2color.data.DrawingTemplate
 import com.squasre.tap2color.data.SampleDrawings
 
@@ -30,10 +29,10 @@ fun HomeScreen(
     onDrawingSelected: (DrawingTemplate) -> Unit,
     onGalleryClick: () -> Unit
 ) {
-    var selectedCategory by remember { mutableStateOf(DrawingCategory.ALL) }
+    var selectedCategory by remember { mutableStateOf("All") }
     
-    val filteredDrawings = remember(selectedCategory) {
-        if (selectedCategory == DrawingCategory.ALL) {
+    val filteredDrawings = remember(selectedCategory, SampleDrawings.all) {
+        if (selectedCategory == "All") {
             SampleDrawings.all
         } else {
             SampleDrawings.all.filter { it.category == selectedCategory }
@@ -78,16 +77,22 @@ fun HomeScreen(
                 onCategorySelected = { selectedCategory = it }
             )
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                items(filteredDrawings) { template ->
-                    DrawingCard(template) {
-                        onDrawingSelected(template)
+            if (filteredDrawings.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF6200EE))
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    items(filteredDrawings) { template ->
+                        DrawingCard(template) {
+                            onDrawingSelected(template)
+                        }
                     }
                 }
             }
@@ -97,8 +102,8 @@ fun HomeScreen(
 
 @Composable
 fun CategoryFilterBar(
-    selectedCategory: DrawingCategory,
-    onCategorySelected: (DrawingCategory) -> Unit
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit
 ) {
     LazyRow(
         modifier = Modifier
@@ -107,14 +112,14 @@ fun CategoryFilterBar(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(DrawingCategory.values()) { category ->
+        items(SampleDrawings.availableCategories) { category ->
             val isSelected = category == selectedCategory
             FilterChip(
                 selected = isSelected,
                 onClick = { onCategorySelected(category) },
                 label = { 
                     Text(
-                        category.displayName,
+                        category,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                     ) 
                 },
@@ -155,11 +160,11 @@ fun DrawingCard(template: DrawingTemplate, onClick: () -> Unit) {
                     .background(Color(0xFFF1F3F4)),
                 contentAlignment = Alignment.Center
             ) {
-                val placeholder = when(template.category) {
-                    DrawingCategory.ANIMALS -> "🐾"
-                    DrawingCategory.VEHICLES -> "🚗"
-                    DrawingCategory.FOOD -> "🍎"
-                    DrawingCategory.NATURE -> "🌳"
+                val placeholder = when(template.category.uppercase()) {
+                    "ANIMALS" -> "🐾"
+                    "VEHICLES" -> "🚗"
+                    "FOOD" -> "🍎"
+                    "NATURE" -> "🌳"
                     else -> "🎨"
                 }
                 Text(placeholder, fontSize = 48.sp)
@@ -179,7 +184,7 @@ fun DrawingCard(template: DrawingTemplate, onClick: () -> Unit) {
                         color = Color.Black
                     )
                     Text(
-                        template.category.displayName,
+                        template.category,
                         fontSize = 12.sp,
                         color = Color.Gray
                     )

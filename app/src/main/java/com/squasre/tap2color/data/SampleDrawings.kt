@@ -1,181 +1,53 @@
 package com.squasre.tap2color.data
 
+import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+@Serializable
 data class DrawingTemplate(
     val id: String,
     val name: String,
-    val category: DrawingCategory,
+    val category: String,
     val svgContent: String
 )
 
-enum class DrawingCategory(val displayName: String) {
-    ANIMALS("Animals"),
-    VEHICLES("Vehicles"),
-    FOOD("Food"),
-    NATURE("Nature"),
-    ALL("All")
-}
-
 object SampleDrawings {
-    val cat = DrawingTemplate(
-        id = "cat",
-        name = "Cat",
-        category = DrawingCategory.ANIMALS,
-        svgContent = """
-            <svg viewBox="0 0 300 300">
-            <path id="face"
-            d="M150 60
-            C80 60 50 120 50 170
-            C50 230 100 260 150 260
-            C200 260 250 230 250 170
-            C250 120 220 60 150 60Z"
-            fill="#FFFFFF"
-            stroke="#000"
-            stroke-width="4"/>
-            <path id="ear_left"
-            d="M80 80 L120 20 L140 80 Z"
-            fill="#FFFFFF"
-            stroke="#000"
-            stroke-width="4"/>
-            <path id="ear_right"
-            d="M160 80 L180 20 L220 80 Z"
-            fill="#FFFFFF"
-            stroke="#000"
-            stroke-width="4"/>
-            </svg>
-        """.trimIndent()
-    )
+    private val json = Json { 
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
 
-    val dog = DrawingTemplate(
-        id = "dog",
-        name = "Dog",
-        category = DrawingCategory.ANIMALS,
-        svgContent = """
-            <svg viewBox="0 0 300 300">
-            <path id="head" d="M150 50 C100 50 60 90 60 140 C60 190 100 230 150 230 C200 230 240 190 240 140 C240 90 200 50 150 50Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            <path id="ear_l" d="M70 100 C40 80 30 150 50 180 Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            <path id="ear_r" d="M230 100 C260 80 270 150 250 180 Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            <circle id="nose" cx="150" cy="160" r="15" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            </svg>
-        """.trimIndent()
-    )
+    var all by mutableStateOf<List<DrawingTemplate>>(emptyList())
+        private set
+        
+    var availableCategories by mutableStateOf<List<String>>(listOf("All"))
+        private set
 
-    val elephant = DrawingTemplate(
-        id = "elephant",
-        name = "Elephant",
-        category = DrawingCategory.ANIMALS,
-        svgContent = """
-            <svg viewBox="0 0 400 300">
-            <path id="body" d="M100 100 C100 50 300 50 300 100 C350 100 380 150 350 250 L100 250 Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            <path id="ear" d="M80 80 C30 80 30 200 80 220 Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            <path id="trunk" d="M320 150 C380 150 380 280 340 280 L320 250 Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            </svg>
-        """.trimIndent()
-    )
+    fun load(context: Context) {
+        if (all.isNotEmpty()) return
+        try {
+            val jsonString = context.assets.open("drawings.json").bufferedReader().use { it.readText() }
+            val loadedDrawings = json.decodeFromString<List<DrawingTemplate>>(jsonString)
+            if (loadedDrawings.isNotEmpty()) {
+                all = loadedDrawings
+                availableCategories = listOf("All") + loadedDrawings.map { it.category }.distinct().sorted()
+            } else {
+                loadFallback()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            loadFallback()
+        }
+    }
 
-    val apple = DrawingTemplate(
-        id = "apple",
-        name = "Apple",
-        category = DrawingCategory.FOOD,
-        svgContent = """
-            <svg viewBox="0 0 300 300">
-            <path id="apple_body"
-            d="M150 90
-            C80 90 60 150 60 190
-            C60 240 100 260 150 260
-            C200 260 240 240 240 190
-            C240 150 220 90 150 90Z"
-            fill="#FFFFFF"
-            stroke="#000"
-            stroke-width="4"/>
-            <path id="leaf"
-            d="M150 70 C170 40 210 40 200 80 Z"
-            fill="#FFFFFF"
-            stroke="#000"
-            stroke-width="4"/>
-            </svg>
-        """.trimIndent()
-    )
-
-    val banana = DrawingTemplate(
-        id = "banana",
-        name = "Banana",
-        category = DrawingCategory.FOOD,
-        svgContent = """
-            <svg viewBox="0 0 300 300">
-            <path id="fruit" d="M50 100 C100 50 250 50 250 250 C200 250 150 200 50 100 Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            <rect id="stem" x="35" y="80" width="20" height="30" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            </svg>
-        """.trimIndent()
-    )
-
-    val car = DrawingTemplate(
-        id = "car",
-        name = "Car",
-        category = DrawingCategory.VEHICLES,
-        svgContent = """
-            <svg viewBox="0 0 400 200">
-            <rect id="car_body"
-            x="60" y="80"
-            width="280"
-            height="80"
-            fill="#FFFFFF"
-            stroke="#000"
-            stroke-width="4"/>
-            <circle id="wheel_left"
-            cx="120"
-            cy="170"
-            r="30"
-            fill="#FFFFFF"
-            stroke="#000"
-            stroke-width="4"/>
-            <circle id="wheel_right"
-            cx="280"
-            cy="170"
-            r="30"
-            fill="#FFFFFF"
-            stroke="#000"
-            stroke-width="4"/>
-            </svg>
-        """.trimIndent()
-    )
-
-    val truck = DrawingTemplate(
-        id = "truck",
-        name = "Truck",
-        category = DrawingCategory.VEHICLES,
-        svgContent = """
-            <svg viewBox="0 0 400 250">
-            <rect id="cabin" x="50" y="100" width="100" height="100" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            <rect id="bed" x="150" y="50" width="200" height="150" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            <circle id="w1" cx="100" cy="210" r="25" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            <circle id="w2" cx="200" cy="210" r="25" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            <circle id="w3" cx="300" cy="210" r="25" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            </svg>
-        """.trimIndent()
-    )
-
-    val tree = DrawingTemplate(
-        id = "tree",
-        name = "Tree",
-        category = DrawingCategory.NATURE,
-        svgContent = """
-            <svg viewBox="0 0 300 400">
-            <rect id="trunk" x="130" y="250" width="40" height="100" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            <path id="leaves" d="M150 50 C50 150 100 280 150 280 C200 280 250 150 150 50Z" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            </svg>
-        """.trimIndent()
-    )
-
-    val sun = DrawingTemplate(
-        id = "sun",
-        name = "Sun",
-        category = DrawingCategory.NATURE,
-        svgContent = """
-            <svg viewBox="0 0 300 300">
-            <circle id="core" cx="150" cy="150" r="60" fill="#FFFFFF" stroke="#000" stroke-width="4"/>
-            </svg>
-        """.trimIndent()
-    )
-
-    val all = listOf(cat, dog, elephant, apple, banana, car, truck, tree, sun)
+    private fun loadFallback() {
+        all = listOf(
+            DrawingTemplate("sun", "Sun", "NATURE", "<svg viewBox=\"0 0 300 300\"><circle id=\"core\" cx=\"150\" cy=\"150\" r=\"60\" fill=\"#FFFFFF\" stroke=\"#000\" stroke-width=\"4\"/></svg>")
+        )
+        availableCategories = listOf("All", "NATURE")
+    }
 }
