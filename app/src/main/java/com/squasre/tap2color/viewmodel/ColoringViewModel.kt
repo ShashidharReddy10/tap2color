@@ -1,5 +1,7 @@
 package com.squasre.tap2color.viewmodel
 
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.graphics.Color
@@ -17,7 +19,13 @@ class ColoringViewModel : ViewModel() {
 
     val regionColors = mutableStateMapOf<String, Color>()
     
+    val customColors = mutableStateListOf<Color>()
+    
     private val history = mutableStateListOf<Map<String, Color>>()
+
+    val isCompleted by derivedStateOf {
+        regionColors.isNotEmpty() && regionColors.values.all { it != Color.White }
+    }
 
     fun loadTemplate(template: DrawingTemplate) {
         if (currentTemplate?.id == template.id) return
@@ -34,7 +42,6 @@ class ColoringViewModel : ViewModel() {
     fun colorRegion(regionId: String, color: Color) {
         if (regionColors[regionId] == color) return
         
-        // Save current state to history before changing
         saveToHistory()
         regionColors[regionId] = color
     }
@@ -58,6 +65,12 @@ class ColoringViewModel : ViewModel() {
         saveToHistory()
         regionColors.keys.forEach { 
             regionColors[it] = Color.White 
+        }
+    }
+
+    fun addCustomColor(color: Color) {
+        if (color !in customColors) {
+            customColors.add(0, color)
         }
     }
 }
