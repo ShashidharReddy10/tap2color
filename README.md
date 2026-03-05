@@ -6,13 +6,14 @@ A simple, clean, and kid-friendly Android coloring app built with **Kotlin** and
 
 - **Tap-to-Color**: Simple touch interaction to fill SVG regions with vibrant colors.
 - **Dynamic Content**: Load all drawings and categories dynamically from a single JSON file (`assets/drawings.json`).
-- **Smart SVG Parsing**: Dynamically parses SVG paths, rects, and circles with unique IDs.
-- **Magic Color Picker**: An intuitive HSV-based color picker for creating custom colors.
-- **Art Gallery**: A personal collection view with live previews of your colored art.
-- **Dynamic Category Filtering**: Categories are automatically generated and sorted based on your JSON data.
+- **Magic Sparkle Brushes (Premium)**: Paint with animated, twinkling stars for a magical effect.
+- **Magic Palette**: A grid-based color palette that can be randomized and shuffled with a long tap.
+- **Smart "Next" Navigation**: One-tap skip to the next uncompleted drawing for a seamless coloring experience.
+- **Magic Color Picker**: An intuitive HSV-based color picker for creating and saving custom colors.
+- **Art Gallery**: A personal collection view with live previews of your colored art, filterable by category.
+- **Monetization Ready**: Integrated premium content system with a kid-friendly "Magic Art Pass" paywall.
 - **Celebration Animation**: A fun confetti and sparkle effect triggered when a drawing is fully colored.
-- **Progress Persistence**: Automatically saves coloring progress and custom colors using SharedPreferences.
-- **Undo & Reset**: Easy-to-use buttons to correct mistakes or start over.
+- **Progress Persistence**: Automatically saves coloring progress, custom colors, and premium status using SharedPreferences.
 - **Sharing**: 
     - Export single drawings as high-quality PNGs.
     - Generate and share a beautiful collage of your top 10 gallery items.
@@ -33,13 +34,13 @@ A simple, clean, and kid-friendly Android coloring app built with **Kotlin** and
 - `assets/`: Contains `drawings.json`, the source of truth for all coloring templates.
 - `ui/`: Contains all Compose screens (`HomeScreen`, `DrawingScreen`, `GalleryScreen`) and theme.
 - `svg/`: Logic for parsing SVG strings into interactive Compose `Path` objects.
-- `viewmodel/`: `ColoringViewModel` handling app state, persistence, and history.
+- `viewmodel/`: `ColoringViewModel` handling app state, premium logic, persistence, and history.
 - `export/`: `ImageExporter` for generating and sharing PNG images and gallery collages.
 - `data/`: `SampleDrawings` state holder that loads and manages dynamic content.
 
 ## 🛠️ How to Add New Drawings
 
-Adding new content is as easy as updating the `app/src/main/assets/drawings.json` file. No code changes required!
+Adding new content is as easy as updating the `app/src/main/assets/drawings.json` file.
 
 Example JSON entry:
 ```json
@@ -47,7 +48,8 @@ Example JSON entry:
   "id": "new_art",
   "name": "Magic Castle",
   "category": "FANTASY",
-  "svgContent": "<svg viewBox=\"0 0 300 300\"><path id=\"tower\" d=\"...\" fill=\"#FFFFFF\" stroke=\"#000\"/></svg>"
+  "svgContent": "<svg viewBox=\"0 0 300 300\"><path id=\"tower\" d=\"...\" fill=\"#FFFFFF\" stroke=\"#000\"/></svg>",
+  "isPremium": true
 }
 ```
 

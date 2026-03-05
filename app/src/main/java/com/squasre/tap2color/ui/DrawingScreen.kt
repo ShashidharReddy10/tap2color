@@ -14,8 +14,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -47,6 +49,7 @@ import com.squasre.tap2color.export.ImageExporter
 import com.squasre.tap2color.svg.SvgParser
 import com.squasre.tap2color.viewmodel.BrushType
 import com.squasre.tap2color.viewmodel.ColoringViewModel
+import androidx.compose.foundation.combinedClickable
 import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -151,11 +154,17 @@ fun DrawingScreen(
                 )
             },
             bottomBar = {
-                ColorPalette(
+                ColorGridPalette(
                     selectedColor = selectedColor,
                     customColors = viewModel.customColors,
                     premiumColors = if (viewModel.isPremiumUnlocked) neonColors else emptyList(),
                     onColorSelected = { selectedColor = it },
+                    onColorLongClick = { viewModel.removeCustomColor(it) },
+                    onFixedColorLongClick = { oldColor ->
+                        val randomColor = Color(Random.nextInt(256), Random.nextInt(256), Random.nextInt(256))
+                        if (selectedColor == oldColor) selectedColor = randomColor
+                        randomColor
+                    },
                     onAddColorClick = { showColorPicker = true }
                 )
             }
@@ -375,20 +384,26 @@ private fun isPointInPath(x: Float, y: Float, path: androidx.compose.ui.graphics
 }
 
 @Composable
-fun ColorPalette(
+fun ColorGridPalette(
     selectedColor: Color,
     customColors: List<Color>,
     premiumColors: List<Color>,
     onColorSelected: (Color) -> Unit,
+    onColorLongClick: (Color) -> Unit,
+    onFixedColorLongClick: (Color) -> Color,
     onAddColorClick: () -> Unit
 ) {
-    val presetColors = listOf(
-        Color(0xFFFF5252), Color(0xFFFF4081), Color(0xFFE040FB), Color(0xFF7C4DFF),
-        Color(0xFF536DFE), Color(0xFF448AFF), Color(0xFF40C4FF), Color(0xFF18FFFF),
-        Color(0xFF64FFDA), Color(0xFF69F0AE), Color(0xFFB2FF59), Color(0xFFEEFF41),
-        Color(0xFFFFFF00), Color(0xFFFFD740), Color(0xFFFFAB40), Color(0xFFFF6E40),
-        Color(0xFF795548), Color(0xFF9E9E9E), Color(0xFF607D8B), Color.Black
-    )
+    val initialPresetColors = remember {
+        listOf(
+            Color(0xFFFF5252), Color(0xFFFF4081), Color(0xFFE040FB), Color(0xFF7C4DFF),
+            Color(0xFF536DFE), Color(0xFF448AFF), Color(0xFF40C4FF), Color(0xFF18FFFF),
+            Color(0xFF64FFDA), Color(0xFF69F0AE), Color(0xFFB2FF59), Color(0xFFEEFF41),
+            Color(0xFFFFFF00), Color(0xFFFFD740), Color(0xFFFFAB40), Color(0xFFFF6E40),
+            Color(0xFF795548), Color(0xFF9E9E9E), Color(0xFF607D8B), Color.Black
+        )
+    }
+    
+    val presetColors = remember { mutableStateListOf<Color>().apply { addAll(initialPresetColors) } }
 
     Surface(
         tonalElevation = 8.dp,
@@ -396,50 +411,77 @@ fun ColorPalette(
         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
         color = Color.White
     ) {
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 20.dp, horizontal = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            contentPadding = PaddingValues(horizontal = 16.dp)
-        ) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFF0F0F0))
-                        .border(2.dp, Color(0xFFDDDDDD), CircleShape)
-                        .clickable { onAddColorClick() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.DarkGray, modifier = Modifier.size(32.dp))
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Magic Palette", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = Color(0xFF6200EE))
+                IconButton(onClick = onAddColorClick, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Add, null, tint = Color(0xFF6200EE))
                 }
             }
             
-            items(customColors) { color -> ColorCircle(color, selectedColor == color) { onColorSelected(color) } }
-            items(premiumColors) { color -> 
-                Box {
-                    ColorCircle(color, selectedColor == color) { onColorSelected(color) }
-                    Icon(Icons.Default.Star, null, tint = Color.White, modifier = Modifier.size(16.dp).align(Alignment.TopEnd).padding(2.dp))
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 52.dp),
+                modifier = Modifier.height(150.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                contentPadding = PaddingValues(bottom = 8.dp)
+            ) {
+                items(customColors) { color ->
+                    ColorCircle(
+                        color = color,
+                        isSelected = selectedColor == color,
+                        onClick = { onColorSelected(color) },
+                        onLongClick = { onColorLongClick(color) }
+                    )
+                }
+                
+                items(premiumColors) { color -> 
+                    Box {
+                        ColorCircle(
+                            color = color,
+                            isSelected = selectedColor == color,
+                            onClick = { onColorSelected(color) },
+                            onLongClick = { } 
+                        )
+                        Icon(Icons.Default.Star, null, tint = Color.White, modifier = Modifier.size(14.dp).align(Alignment.TopEnd).padding(2.dp))
+                    }
+                }
+                
+                itemsIndexed(presetColors) { index, color ->
+                    ColorCircle(
+                        color = color,
+                        isSelected = selectedColor == color,
+                        onClick = { onColorSelected(color) },
+                        onLongClick = {
+                            val newColor = onFixedColorLongClick(color)
+                            presetColors[index] = newColor
+                            presetColors.shuffle() // Randomize positions on long tap
+                        }
+                    )
                 }
             }
-            items(presetColors) { color -> ColorCircle(color, selectedColor == color) { onColorSelected(color) } }
         }
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun ColorCircle(color: Color, isSelected: Boolean, onClick: () -> Unit) {
-    val size by animateFloatAsState(if (isSelected) 72f else 64f, label = "size")
+fun ColorCircle(color: Color, isSelected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
+    val size by animateFloatAsState(if (isSelected) 56f else 48f, label = "size")
     Box(
         modifier = Modifier
             .size(size.dp)
             .clip(CircleShape)
             .background(color)
             .border(if (isSelected) 4.dp else 2.dp, if (isSelected) Color(0xFF333333) else Color.Transparent, CircleShape)
-            .clickable { onClick() }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     )
 }
 

@@ -124,6 +124,11 @@ class ColoringViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun removeCustomColor(color: Color) {
+        customColors.remove(color)
+        saveCustomColors()
+    }
+
     fun unlockPremium() {
         isPremiumUnlocked = true
         prefs.edit { putBoolean("premium_unlocked", true) }
