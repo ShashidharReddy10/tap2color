@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,6 +45,7 @@ import androidx.compose.ui.window.Dialog
 import com.squasre.tap2color.data.DrawingTemplate
 import com.squasre.tap2color.export.ImageExporter
 import com.squasre.tap2color.svg.SvgParser
+import com.squasre.tap2color.viewmodel.BrushType
 import com.squasre.tap2color.viewmodel.ColoringViewModel
 import kotlin.random.Random
 
@@ -88,6 +90,22 @@ fun DrawingScreen(
         viewModel.loadTemplate(template)
     }
 
+    val neonColors = listOf(
+        Color(0xFF39FF14), Color(0xFFFE019A), Color(0xFF00FFFF),
+        Color(0xFFFFAC1C), Color(0xFFBC13FE), Color(0xFFE7EE4F)
+    )
+
+    val infiniteTransition = rememberInfiniteTransition(label = "sparkle")
+    val sparkleAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sparkleAlpha"
+    )
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
@@ -99,6 +117,17 @@ fun DrawingScreen(
                         }
                     },
                     actions = {
+                        if (viewModel.isPremiumUnlocked) {
+                            IconButton(onClick = {
+                                viewModel.selectedBrushByPremium = if (viewModel.selectedBrushByPremium == BrushType.NORMAL) BrushType.SPARKLE else BrushType.NORMAL
+                            }) {
+                                Icon(
+                                    Icons.Default.Star,
+                                    contentDescription = "Toggle Sparkle",
+                                    tint = if (viewModel.selectedBrushByPremium == BrushType.SPARKLE) Color(0xFFFFD700) else Color.Gray
+                                )
+                            }
+                        }
                         IconButton(onClick = { viewModel.undo() }) {
                             Icon(Icons.Default.Undo, contentDescription = "Undo")
                         }
@@ -115,9 +144,8 @@ fun DrawingScreen(
                         }) {
                             Icon(Icons.Default.Share, contentDescription = "Share")
                         }
-                        // Skip/Next button directly in top bar
                         IconButton(onClick = onNextDrawing) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Skip to Next")
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next")
                         }
                     }
                 )
@@ -126,6 +154,7 @@ fun DrawingScreen(
                 ColorPalette(
                     selectedColor = selectedColor,
                     customColors = viewModel.customColors,
+                    premiumColors = if (viewModel.isPremiumUnlocked) neonColors else emptyList(),
                     onColorSelected = { selectedColor = it },
                     onAddColorClick = { showColorPicker = true }
                 )
@@ -140,6 +169,7 @@ fun DrawingScreen(
             ) {
                 val regions = viewModel.regions
                 val regionColors = viewModel.regionColors
+                val regionBrushes = viewModel.regionBrushes
 
                 Canvas(
                     modifier = Modifier
@@ -161,7 +191,7 @@ fun DrawingScreen(
 
                                 for (region in regions.reversed()) {
                                     if (isPointInPath(svgX, svgY, region.path)) {
-                                        viewModel.colorRegion(region.id, selectedColor)
+                                        viewModel.colorRegion(region.id, selectedColor, viewModel.selectedBrushByPremium)
                                         lastTappedRegion = region.id
                                         popTrigger++
                                         break
@@ -185,20 +215,44 @@ fun DrawingScreen(
                     }) {
                         regions.forEach { region ->
                             val color = regionColors[region.id] ?: Color.White
+                            val brush = regionBrushes[region.id] ?: BrushType.NORMAL
                             val isLastTapped = lastTappedRegion == region.id
                             
+                            val drawBlock = {
+                                drawPath(path = region.path, color = color)
+                                
+                                if (brush == BrushType.SPARKLE && color != Color.White) {
+                                    val random = Random(region.id.hashCode())
+                                    repeat(15) {
+                                        val rectF = RectF()
+                                        region.path.asAndroidPath().computeBounds(rectF, true)
+                                        val rx = rectF.left + random.nextFloat() * rectF.width()
+                                        val ry = rectF.top + random.nextFloat() * rectF.height()
+                                        if (isPointInPath(rx, ry, region.path)) {
+                                            drawCircle(
+                                                color = Color.White.copy(alpha = sparkleAlpha),
+                                                radius = 3f / scale,
+                                                center = Offset(rx, ry)
+                                            )
+                                        }
+                                    }
+                                }
+                                
+                                drawPath(
+                                    path = region.path,
+                                    color = Color.Black,
+                                    style = Stroke(width = 4f / scale)
+                                )
+                            }
+
                             if (isLastTapped && popScale != 1.0f) {
                                 val rectF = RectF()
                                 region.path.asAndroidPath().computeBounds(rectF, true)
-                                val pivot = Offset(rectF.centerX(), rectF.centerY())
-                                
                                 withTransform({
-                                    scale(popScale, popScale, pivot = pivot)
-                                }) {
-                                    drawRegion(region, color, scale)
-                                }
+                                    scale(popScale, popScale, pivot = Offset(rectF.centerX(), rectF.centerY()))
+                                }) { drawBlock() }
                             } else {
-                                drawRegion(region, color, scale)
+                                drawBlock()
                             }
                         }
                     }
@@ -206,7 +260,6 @@ fun DrawingScreen(
             }
         }
 
-        // Celebration Overlay
         AnimatedVisibility(
             visible = showCelebration,
             enter = fadeIn() + scaleIn(initialScale = 0.8f),
@@ -309,22 +362,6 @@ fun CelebrationOverlay(onDismiss: () -> Unit, onNextDrawing: () -> Unit) {
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRegion(
-    region: com.squasre.tap2color.svg.SvgRegion,
-    color: Color,
-    baseScale: Float
-) {
-    drawPath(
-        path = region.path,
-        color = color
-    )
-    drawPath(
-        path = region.path,
-        color = Color.Black,
-        style = Stroke(width = 4f / baseScale)
-    )
-}
-
 private fun isPointInPath(x: Float, y: Float, path: androidx.compose.ui.graphics.Path): Boolean {
     val androidPath = path.asAndroidPath()
     val rectF = RectF()
@@ -341,6 +378,7 @@ private fun isPointInPath(x: Float, y: Float, path: androidx.compose.ui.graphics
 fun ColorPalette(
     selectedColor: Color,
     customColors: List<Color>,
+    premiumColors: List<Color>,
     onColorSelected: (Color) -> Unit,
     onAddColorClick: () -> Unit
 ) {
@@ -376,40 +414,31 @@ fun ColorPalette(
                         .clickable { onAddColorClick() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = "Add Color",
-                        tint = Color.DarkGray,
-                        modifier = Modifier.size(32.dp)
-                    )
+                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.DarkGray, modifier = Modifier.size(32.dp))
                 }
             }
             
-            items(customColors) { color ->
-                ColorCircle(color, selectedColor == color) { onColorSelected(color) }
+            items(customColors) { color -> ColorCircle(color, selectedColor == color) { onColorSelected(color) } }
+            items(premiumColors) { color -> 
+                Box {
+                    ColorCircle(color, selectedColor == color) { onColorSelected(color) }
+                    Icon(Icons.Default.Star, null, tint = Color.White, modifier = Modifier.size(16.dp).align(Alignment.TopEnd).padding(2.dp))
+                }
             }
-
-            items(presetColors) { color ->
-                ColorCircle(color, selectedColor == color) { onColorSelected(color) }
-            }
+            items(presetColors) { color -> ColorCircle(color, selectedColor == color) { onColorSelected(color) } }
         }
     }
 }
 
 @Composable
 fun ColorCircle(color: Color, isSelected: Boolean, onClick: () -> Unit) {
-    val size by animateFloatAsState(if (isSelected) 72f else 64f, label = "circleSize")
-    
+    val size by animateFloatAsState(if (isSelected) 72f else 64f, label = "size")
     Box(
         modifier = Modifier
             .size(size.dp)
             .clip(CircleShape)
             .background(color)
-            .border(
-                width = if (isSelected) 4.dp else 2.dp,
-                color = if (isSelected) Color(0xFF333333) else Color.Transparent,
-                shape = CircleShape
-            )
+            .border(if (isSelected) 4.dp else 2.dp, if (isSelected) Color(0xFF333333) else Color.Transparent, CircleShape)
             .clickable { onClick() }
     )
 }
@@ -419,63 +448,26 @@ fun CustomColorPickerDialog(onDismiss: () -> Unit, onColorSelected: (Color) -> U
     var hue by remember { mutableStateOf(0f) }
     var saturation by remember { mutableStateOf(1f) }
     var value by remember { mutableStateOf(1f) }
-
-    val currentColor = remember(hue, saturation, value) {
-        Color.hsv(hue, saturation, value)
-    }
+    val currentColor = remember(hue, saturation, value) { Color.hsv(hue, saturation, value) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(32.dp),
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+            colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            Column(
-                modifier = Modifier.padding(28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Column(modifier = Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Magic Color Picker", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape)
-                        .background(currentColor)
-                        .border(4.dp, Color(0xFFEEEEEE), CircleShape)
-                )
-                
+                Box(modifier = Modifier.size(120.dp).clip(CircleShape).background(currentColor).border(4.dp, Color(0xFFEEEEEE), CircleShape))
                 Spacer(modifier = Modifier.height(32.dp))
-                
-                ColorSlider(label = "Color (Hue)", value = hue, valueRange = 0f..360f, onValueChange = { hue = it })
-                Spacer(modifier = Modifier.height(16.dp))
-                ColorSlider(label = "Vibrancy", value = saturation, valueRange = 0f..1f, onValueChange = { saturation = it })
-                Spacer(modifier = Modifier.height(16.dp))
-                ColorSlider(label = "Brightness", value = value, valueRange = 0f..1f, onValueChange = { value = it })
-                
+                ColorSlider("Color (Hue)", hue, 0f..360f) { hue = it }
+                ColorSlider("Vibrancy", saturation, 0f..1f) { saturation = it }
+                ColorSlider("Brightness", value, 0f..1f) { value = it }
                 Spacer(modifier = Modifier.height(32.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text("Cancel", fontWeight = FontWeight.Bold)
-                    }
-                    Button(
-                        onClick = { onColorSelected(currentColor) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
-                    ) {
-                        Text("Pick Me!", fontWeight = FontWeight.Bold)
-                    }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text("Cancel") }
+                    Button(onClick = { onColorSelected(currentColor) }, modifier = Modifier.weight(1f)) { Text("Pick Me!") }
                 }
             }
         }
@@ -483,20 +475,9 @@ fun CustomColorPickerDialog(onDismiss: () -> Unit, onColorSelected: (Color) -> U
 }
 
 @Composable
-fun ColorSlider(label: String, value: Float, valueRange: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit) {
+fun ColorSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-        }
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = valueRange,
-            colors = SliderDefaults.colors(
-                thumbColor = Color(0xFF6200EE),
-                activeTrackColor = Color(0xFF6200EE).copy(alpha = 0.3f),
-                inactiveTrackColor = Color(0xFFF0F0F0)
-            )
-        )
+        Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+        Slider(value = value, onValueChange = onValueChange, valueRange = range)
     }
 }

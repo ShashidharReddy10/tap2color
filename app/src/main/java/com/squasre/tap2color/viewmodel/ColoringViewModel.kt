@@ -16,6 +16,10 @@ import com.squasre.tap2color.data.DrawingTemplate
 import com.squasre.tap2color.svg.SvgParser
 import com.squasre.tap2color.svg.SvgRegion
 
+enum class BrushType {
+    NORMAL, SPARKLE
+}
+
 class ColoringViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("tap2color_prefs", Context.MODE_PRIVATE)
     
@@ -26,10 +30,13 @@ class ColoringViewModel(application: Application) : AndroidViewModel(application
         private set
 
     val regionColors = mutableStateMapOf<String, Color>()
+    val regionBrushes = mutableStateMapOf<String, BrushType>()
     
     val customColors = mutableStateListOf<Color>()
     
-    private val history = mutableStateListOf<Map<String, Color>>()
+    private val history = mutableStateListOf<Pair<Map<String, Color>, Map<String, BrushType>>>()
+
+    var selectedBrushByPremium by mutableStateOf(BrushType.NORMAL)
 
     var isPremiumUnlocked by mutableStateOf(false)
         private set
@@ -49,15 +56,18 @@ class ColoringViewModel(application: Application) : AndroidViewModel(application
         currentTemplate = template
         regions = SvgParser.parse(template.svgContent).toMutableList()
         regionColors.clear()
+        regionBrushes.clear()
         history.clear()
         
         // Try to load saved progress
         val savedProgress = loadProgress(template.id)
-        if (savedProgress.isNotEmpty()) {
-            regionColors.putAll(savedProgress)
+        if (savedProgress.first.isNotEmpty()) {
+            regionColors.putAll(savedProgress.first)
+            regionBrushes.putAll(savedProgress.second)
         } else {
             regions.forEach { 
-                regionColors[it.id] = Color.White 
+                regionColors[it.id] = Color.White
+                regionBrushes[it.id] = BrushType.NORMAL
             }
         }
     }
@@ -71,16 +81,17 @@ class ColoringViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun colorRegion(regionId: String, color: Color) {
-        if (regionColors[regionId] == color) return
+    fun colorRegion(regionId: String, color: Color, brushType: BrushType) {
+        if (regionColors[regionId] == color && regionBrushes[regionId] == brushType) return
         
         saveToHistory()
         regionColors[regionId] = color
+        regionBrushes[regionId] = brushType
         saveProgress()
     }
 
     private fun saveToHistory() {
-        history.add(regionColors.toMap())
+        history.add(regionColors.toMap() to regionBrushes.toMap())
         if (history.size > 20) {
             history.removeAt(0)
         }
@@ -88,9 +99,11 @@ class ColoringViewModel(application: Application) : AndroidViewModel(application
 
     fun undo() {
         if (history.isNotEmpty()) {
-            val lastState = history.removeAt(history.size - 1)
+            val (lastColors, lastBrushes) = history.removeAt(history.size - 1)
             regionColors.clear()
-            regionColors.putAll(lastState)
+            regionColors.putAll(lastColors)
+            regionBrushes.clear()
+            regionBrushes.putAll(lastBrushes)
             saveProgress()
         }
     }
@@ -99,6 +112,7 @@ class ColoringViewModel(application: Application) : AndroidViewModel(application
         saveToHistory()
         regionColors.keys.forEach { 
             regionColors[it] = Color.White 
+            regionBrushes[it] = BrushType.NORMAL
         }
         saveProgress()
     }
@@ -126,19 +140,28 @@ class ColoringViewModel(application: Application) : AndroidViewModel(application
             regionColors.forEach { (id, color) ->
                 putInt("progress_${templateId}_$id", color.toArgb())
             }
+            regionBrushes.forEach { (id, brush) ->
+                putString("brush_${templateId}_$id", brush.name)
+            }
         }
     }
 
-    private fun loadProgress(templateId: String): Map<String, Color> {
-        val progress = mutableMapOf<String, Color>()
+    private fun loadProgress(templateId: String): Pair<Map<String, Color>, Map<String, BrushType>> {
+        val colors = mutableMapOf<String, Color>()
+        val brushes = mutableMapOf<String, BrushType>()
         regions.forEach { region ->
-            val key = "progress_${templateId}_${region.id}"
-            if (prefs.contains(key)) {
-                val argb = prefs.getInt(key, Color.White.toArgb())
-                progress[region.id] = Color(argb)
+            val colorKey = "progress_${templateId}_${region.id}"
+            if (prefs.contains(colorKey)) {
+                val argb = prefs.getInt(colorKey, Color.White.toArgb())
+                colors[region.id] = Color(argb)
+            }
+            val brushKey = "brush_${templateId}_${region.id}"
+            if (prefs.contains(brushKey)) {
+                val brushName = prefs.getString(brushKey, BrushType.NORMAL.name)
+                brushes[region.id] = BrushType.valueOf(brushName ?: BrushType.NORMAL.name)
             }
         }
-        return progress
+        return colors to brushes
     }
 
     private fun saveCustomColors() {
